@@ -18,7 +18,7 @@ void *threadfun()
 
 int main()
 {
-  pthread_t thread = NULL;
+  pthread_t thread;
 
   printf("main: creating thread\n");
   if (pthread_create(&thread, NULL, &threadfun, NULL) != 0)

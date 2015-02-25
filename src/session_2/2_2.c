@@ -1,7 +1,9 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <sys/param.h>
 
 #include <wiringPi.h>
 #include <softPwm.h>
@@ -30,7 +32,7 @@ void reset()
 
 int pwmval(int i, int loc)
 {
-  float dist = fmin(abs(i - loc), abs(i - 255 - loc));
+  float dist = MIN(abs(i - loc), abs(i - 255 - loc));
   float ratio = 1 - (dist / 64);
   return ratio < 0 ? 0 : ratio * 100;
 }
