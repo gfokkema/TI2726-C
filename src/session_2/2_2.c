@@ -24,30 +24,33 @@ void init()
 
 void reset()
 {
-  digitalWrite(LED1, LOW);
-  digitalWrite(LED2, LOW);
-  digitalWrite(LED3, LOW);
-  digitalWrite(LED4, LOW);
+  softPwmStop(LED1);
+  softPwmStop(LED2);
+  softPwmStop(LED3);
+  softPwmStop(LED4);
 }
 
 int pwmval(int i, int loc)
 {
-  float dist = MIN(abs(i - loc), abs(i - 255 - loc));
+  float dist = abs(i - loc);
   float ratio = 1 - (dist / 64);
   return ratio < 0 ? 0 : ratio * 100;
 }
 
 void *threadfun()
 {
-  int i = 0;
+  int inc;
+  int idx = 0;
   while (1)
-  { 
-    softPwmWrite(LED1, pwmval(i, 32));
-    softPwmWrite(LED2, pwmval(i, 96));
-    softPwmWrite(LED3, pwmval(i, 160));
-    softPwmWrite(LED4, pwmval(i, 224));
+  {
+    if (idx == 0)   inc =  1;
+    if (idx == 255) inc = -1;
+    softPwmWrite(LED1, pwmval(idx, 31));
+    softPwmWrite(LED2, pwmval(idx, 95));
+    softPwmWrite(LED3, pwmval(idx, 159));
+    softPwmWrite(LED4, pwmval(idx, 223));
 
-    i = (i + 1) % 255;
+    idx += inc;
     delay(10);
   }
 
