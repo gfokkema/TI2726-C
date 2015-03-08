@@ -2,22 +2,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define QSORTLIMIT 5
+
 typedef struct listptr
 {
   int* start;
   int len;
 } listptr;
 
-listptr* create_list(int len)
+listptr *
+create_list(int len)
 {
-  listptr *list = malloc(sizeof(listptr));
+  listptr * list = malloc(sizeof(listptr));
   list->start = malloc(sizeof(int) * len);
   list->len = len;
 
   return list;
 }
 
-void delete_list(listptr* list)
+void
+delete_list(listptr * list)
 {
   if (list != NULL)
   {
@@ -27,7 +31,8 @@ void delete_list(listptr* list)
   }
 }
 
-void printlist(listptr* l)
+void
+printlist(listptr * l)
 {
   for (int i = 0; i < l->len; i++)
   {
@@ -35,9 +40,10 @@ void printlist(listptr* l)
   }
 }
 
-listptr* merge(listptr* l, listptr* r)
+listptr *
+merge(listptr * l, listptr * r)
 {
-  listptr *res = create_list(l->len + r->len);
+  listptr * res = create_list(l->len + r->len);
 
   int idx = 0;
   int left = 0;
@@ -55,51 +61,59 @@ listptr* merge(listptr* l, listptr* r)
   return res;
 }
 
-void* mergefun(void *params)
+int
+compare (const void * a, const void * b)
 {
-  listptr* left  = ((listptr**)params)[0];
-  listptr* right = ((listptr**)params)[1];
-
-  return merge(left, right);
+  return ( *(int*)a - *(int*)b );
 }
 
-listptr* sort(listptr *list)
+void *
+sortfun(void * params)
 {
-  if (list->len <= 1) return list;
+  printf("new thread: %lu\n", pthread_self());
+  listptr * list = (listptr*)params;
+  listptr * leftres  = NULL;
+  listptr * rightres = NULL;
+  listptr * res      = NULL;;
+
+  if (list->len < QSORTLIMIT)
+  {
+    qsort(list->start, list->len, sizeof(int), compare);
+    res = list;
+    goto clean;
+  }
 
   int mid       = list->len / 2;
   listptr l     = { list->start, mid };
   listptr r     = { list->start + mid, list->len - mid };
-  listptr *lres = sort(&l);
-  listptr *rres = sort(&r);
-  listptr *res  = merge(lres, rres);
 
-  if (lres->len > 1) delete_list(lres);
-  if (rres->len > 1) delete_list(rres);
+  pthread_t left_thread, right_thread;
+  if (pthread_create(&left_thread,  NULL, &sortfun, &l)  != 0) goto err;
+  if (pthread_create(&right_thread, NULL, &sortfun, &r)  != 0) goto err;
+  if (pthread_join  ( left_thread,  (void**)&leftres)    != 0) goto err;
+  if (pthread_join  ( right_thread, (void**)&rightres)   != 0) goto err;
+  res = merge(leftres, rightres);
+  goto clean;
+
+  err:
+  printf("Error!\n"); res = NULL;
+
+  clean:
+  if (leftres  != NULL && leftres->len  >= QSORTLIMIT) delete_list(leftres);
+  if (rightres != NULL && rightres->len >= QSORTLIMIT) delete_list(rightres);
+
   return res;
 }
 
-void* sortfun(void *params)
+int
+main(int argc, char **argv)
 {
-  listptr* list = (listptr*)params;
-  listptr* res  = sort(list);
-
-  return res;
-}
-
-int main(int argc, char **argv)
-{
-  pthread_t left_thread;
-  pthread_t right_thread;
-  pthread_t merge_thread;
-
-  listptr *leftres  = NULL;
-  listptr *rightres = NULL;
-  listptr *mergeres = NULL;
-
   int ret = 0;
   int idx = argc - 1;
-  int *numbers = NULL;
+  int * numbers = NULL;
+  listptr * list = NULL;
+  listptr * mergeres = NULL;
+  pthread_t sort_thread;
 
   if (idx < 1) goto err;
 
@@ -107,41 +121,27 @@ int main(int argc, char **argv)
   for (int i = 1; i <= idx; i++)
   {
     int n = strtol(argv[i], NULL, 10);
-    if (n == 0 && *argv[i] != '0') goto err;
+    if (n == 0 && *argv[i] != '0') goto numerr;
     numbers[i - 1] = n;
   }
 
-  if (idx < 4)
-  {
-    listptr list  = { numbers, idx };
-    if (pthread_create(&left_thread,  NULL, &sortfun, &list)  != 0) goto err;
-    if (pthread_join  ( left_thread,  (void**)&mergeres)  != 0)     goto err;
-  }
-  else
-  {
-    listptr left  = { numbers, idx / 2 };
-    listptr right = { numbers + idx / 2, idx - idx / 2 };
-    if (pthread_create(&left_thread,  NULL, &sortfun, &left)  != 0) goto err;
-    if (pthread_create(&right_thread, NULL, &sortfun, &right) != 0) goto err;
-    if (pthread_join  ( left_thread,  (void**)&leftres)  != 0)      goto err;
-    if (pthread_join  ( right_thread, (void**)&rightres) != 0)      goto err;
-
-    listptr *mergeparams[] = { leftres, rightres };
-    if (pthread_create(&merge_thread, NULL, &mergefun, mergeparams ) != 0) goto err;
-    if (pthread_join  ( merge_thread, (void**)&mergeres) != 0)             goto err;
-  }
+  list        = malloc(sizeof(listptr));
+  list->start = numbers;
+  list->len   = idx;
+  if (pthread_create(&sort_thread, NULL, &sortfun, list) != 0) goto err;
+  if (pthread_join  ( sort_thread, (void**)&mergeres)    != 0) goto err;
 
   printlist(mergeres);
   goto clean;
 
+  numerr:
+  free(numbers);
   err:
   printf("Error!\n"); ret = 1;
 
   clean:
-  if (leftres  != NULL) delete_list(leftres);
-  if (rightres != NULL) delete_list(rightres);
+  if (mergeres != list) delete_list(list);
   if (mergeres != NULL) delete_list(mergeres);
-  if (numbers  != NULL) free(numbers);
 
   return ret;
 }
