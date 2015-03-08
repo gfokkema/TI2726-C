@@ -71,15 +71,9 @@ void *stddevfun(void *par)
     stddev += dev * dev;
   }
   stddev /= p->argc;
-
   printf("The standard deviation is %f\n", sqrt(stddev));
 
   return NULL;
-}
-
-int create(pthread_t *thread, void *(threadfun)(void*), void *params, char* message)
-{
-  return 0;
 }
 
 int main(int argc, char **argv)
