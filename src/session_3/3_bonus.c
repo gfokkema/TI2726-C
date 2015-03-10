@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define QSORTLIMIT 5
+#define QSORTLIMIT 6
 
 typedef struct listptr
 {
@@ -48,6 +48,9 @@ merge(listptr * l, listptr * r)
   int idx = 0;
   int left = 0;
   int right = 0;
+
+  // Iterate over l and r until we've reached the end of either l or r.
+  // At each step, insert the smallest value in res and increment it's corresponding list index. 
   while (left < l->len && right < r->len)
   {
     if ((l->start)[left] <= (r->start)[right])
@@ -55,6 +58,7 @@ merge(listptr * l, listptr * r)
     else
       res->start[idx++] = (r->start)[right++];
   }
+  // Iterate over any remaining list items and add them to res.
   while (left < l->len)  res->start[idx++] = (l->start)[left++];
   while (right < r->len) res->start[idx++] = (r->start)[right++];
 
@@ -70,12 +74,13 @@ compare (const void * a, const void * b)
 void *
 sortfun(void * params)
 {
-  printf("new thread: %lu\n", pthread_self());
-  listptr * list = (listptr*)params;
+  listptr * list     = (listptr*)params;
   listptr * leftres  = NULL;
   listptr * rightres = NULL;
-  listptr * res      = NULL;;
+  listptr * res      = NULL;
+  printf("new thread: %lu length: %d\n", pthread_self(), list->len);
 
+  // Stop recursively descending when the list contains < QSORTLIMIT items.
   if (list->len < QSORTLIMIT)
   {
     qsort(list->start, list->len, sizeof(int), compare);
@@ -83,20 +88,27 @@ sortfun(void * params)
     goto clean;
   }
 
+  // Split the list in a left and a right half.
   int mid       = list->len / 2;
   listptr l     = { list->start, mid };
   listptr r     = { list->start + mid, list->len - mid };
 
+  // Recursively create a mergesort thread for the left and a right halves.
   pthread_t left_thread, right_thread;
-  if (pthread_create(&left_thread,  NULL, &sortfun, &l)  != 0) goto err;
-  if (pthread_create(&right_thread, NULL, &sortfun, &r)  != 0) goto err;
-  if (pthread_join  ( left_thread,  (void**)&leftres)    != 0) goto err;
-  if (pthread_join  ( right_thread, (void**)&rightres)   != 0) goto err;
-  res = merge(leftres, rightres);
-  goto clean;
+  if (pthread_create(&left_thread,  NULL, &sortfun, &l)  != 0)
+  { printf("Error creating left_thread!\n");  res = NULL; goto clean; }
+  if (pthread_create(&right_thread, NULL, &sortfun, &r)  != 0)
+  { printf("Error creating right_thread!\n"); res = NULL; goto clean; }
 
-  err:
-  printf("Error!\n"); res = NULL;
+  // Block until the mergesort threads for the left and right halves join.
+  if (pthread_join  ( left_thread,  (void**)&leftres)    != 0)
+  { printf("Error joining left_thread!\n");   res = NULL; goto clean; }
+  if (pthread_join  ( right_thread, (void**)&rightres)   != 0)
+  { printf("Error joining right_thread!\n");  res = NULL; goto clean; }
+
+  // Merge the sorted result from the left and the right halves.
+  printf("merge thread: %lu length: %d\n", pthread_self(), list->len);
+  res = merge(leftres, rightres);
 
   clean:
   if (leftres  != NULL && leftres->len  >= QSORTLIMIT) delete_list(leftres);
@@ -115,29 +127,46 @@ main(int argc, char **argv)
   listptr * mergeres = NULL;
   pthread_t sort_thread;
 
-  if (idx < 1) goto err;
+  // Exit if no arguments are passed.
+  if (idx < 1)
+  {
+    printf("Syntax: %s <num> <num> ... <num> <num>\n", argv[0]);
 
+    return 1;
+  }
+
+  // Otherwise parse all arguments and store them in numbers.
   numbers = malloc(sizeof(int) * idx);
   for (int i = 1; i <= idx; i++)
   {
+    // strtol returns zero when argv[i] is not a number.
     int n = strtol(argv[i], NULL, 10);
-    if (n == 0 && *argv[i] != '0') goto numerr;
+    if (n == 0 && *argv[i] != '0')
+    {
+      printf("Not a number: %s\n", argv[i]);
+
+      free(numbers);
+      return 1;
+    }
+    // if the number is valid, store it in our array
     numbers[i - 1] = n;
   }
 
+  // Build a listptr from numbers
   list        = malloc(sizeof(listptr));
   list->start = numbers;
   list->len   = idx;
-  if (pthread_create(&sort_thread, NULL, &sortfun, list) != 0) goto err;
-  if (pthread_join  ( sort_thread, (void**)&mergeres)    != 0) goto err;
 
+  // Create a sort_thread and pass it a listptr
+  if (pthread_create(&sort_thread, NULL, &sortfun, list) != 0)
+  { printf("Error creating thread\n"); ret = 1; goto clean; }
+
+  // Wait for the sorting thread to complete and store the result in mergeres
+  if (pthread_join  ( sort_thread, (void**)&mergeres)    != 0)
+  { printf("Error joining thread!\n"); ret = 1; goto clean; }
+
+  // Print the result
   printlist(mergeres);
-  goto clean;
-
-  numerr:
-  free(numbers);
-  err:
-  printf("Error!\n"); ret = 1;
 
   clean:
   if (mergeres != list) delete_list(list);
