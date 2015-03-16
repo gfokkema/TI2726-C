@@ -31,7 +31,7 @@
 \begin{minipage}{0.4\textwidth}
 \begin{flushleft} \large
 \emph{Author:}\\
-Your \textsc{Name} % Your name
+Gerlof \textsc{Fokkema} % Your name
 \end{flushleft}
 \end{minipage}
 ~
@@ -80,13 +80,53 @@ Alex \textsc{van Rijs} % Your name
 \end{titlepage}
 
 \section*{Question 1}
-Write your solution to question 1 here, clearly explain your choice(s)!
+The following scheduling algorithms can result in starvation:
+\begin{itemize}
+\item \textbf{Shortest job first} \\
+      Suppose a very long job $j$ is scheduled at a time $t$.
+      Now suppose that after $t$ a lot of short jobs are continuously scheduled. \\
+      Since the shortest job will always be prioritized, our initial job $j$ will never get a chance to run.
+\item \textbf{Priority} \\
+      Suppose a job $t$ is scheduled at a time $t$ with a low priority $p$. \\
+      Now suppose that after $t$ a lot of jobs are continuously scheduled with priority $q$, where  $q > p$.
+      Again our initial job $j$ will never get a chance to run.
+\end{itemize}
 
 \section*{Question 2}
-Write your solution to question 2 here.
+\begin{itemize}
+\item \textbf{a} \\
+  That process would be allowed to run twice as much as processes with only 1 pointer in the queue.
+\item \textbf{b} \\
+  \textbf{Advantages}
+  \begin{itemize}
+    \item Threads can be assigned priorities with round robin scheduling
+    \item While this strategy supports priorities, it does not cause starvation
+  \end{itemize}
+  \textbf{Disadvantages}
+  \begin{itemize}
+    \item In order to remove a process from the queue, multiple entries have to be removed
+    \item This strategy can still slow down execution of lower priority processes significantly
+  \end{itemize}
+\item \textbf{c} \\
+  Assign a weight to each process, that will determine for how long a process will be allowed to run.
+  This way processes with higher weights, will be allotted more execution time.
+\end{itemize}
 
 \section*{Question 3}\label{results}
-Write your solution to question 3 here.
-
+\begin{itemize}
+\item \textbf{a} \\
+  The time quantum for a thread with priority 15 is 160. \\
+  The time quantum for a thread with priority 40 is 40. \\
+  Priority and the length of the assigned time quantum have an inverse relationship.
+  The higher the priority is, the smaller the time quantum will be.
+  This allows processes with high priority to be responsive,
+  while allowing fast throughput for processes with low priority (and larger time quantum).
+\item \textbf{b} \\
+  Since this thread will now be considered CPU-intensive, it's priority will be lowered to 40.
+  Having it's priority lowered, this process will now be allotted larger quanta.
+\item \textbf{c} \\
+  Assuming that there's new I/O availabe, it's new priority will be 52.
+  This allows for responsiveness for interactive processes.
+\end{itemize}
 
 \end{document}
