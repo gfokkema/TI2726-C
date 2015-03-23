@@ -14,12 +14,9 @@ void *assistfun()
 {
   while (1)
   {
-    sem_wait(&assist_semaphore);
+    sem_wait(&assist_semaphore);         /** The TA can go back to sleeping */
     sleep(10);                           /** Explaining takes a while... */
-
-    printf("TA has finished explaining.\n");
-    sem_post(&assist_mutex);             /** The TA is free for others to use */
-    sem_post(&assist_finished);          /** The TA is finished explaining */
+    sem_post(&assist_finished);          /** The TA is free for others to use */
   }
 
   return NULL;
@@ -27,37 +24,40 @@ void *assistfun()
 
 void *studentfun(void *args)
 {
+  int no = (int)args;
   while (1)
   {
     int queued;
 
     int work_time = 10 + (float)rand() / RAND_MAX * 20;
-    printf("Student %lu starts programming for %d seconds.\n", pthread_self(), work_time);
+    printf("Student %d: Starts programming for %d seconds.\n", no, work_time);
     sleep(work_time);
 
-    printf("Student %lu seeks help from TA.\n", pthread_self());
+    printf("Student %d: Seeks help from TA.\n", no);
     sem_getvalue(&assist_semaphore, &queued);
     if (queued < 10)
     {
-      printf("%d students are queued already.\n", queued);
+      printf("Student %d: %d students are queued already.\n", no, queued);
       sem_post(&assist_semaphore);         /** Get the TA's attention */
       sem_wait(&assist_mutex);             /** Wait until he has noticed you */
 
-      printf("TA starts explaining to %lu\n", pthread_self());
-      sem_wait(&assist_finished);          /** Wait until the TA is done explaining */
+      printf("Student %d: TA starts explaining.\n", no);
+      sem_wait(&assist_finished);          /** Wait until the TA has finished explaining */
+      sem_post(&assist_mutex);             /** Stop nagging the TA ;-) and get back to work */
+      printf("Student %d: TA finished explaining.\n", no);
     }
     else
     {
-      printf("%d students are queued, student %lu will try again later.\n", queued, pthread_self());
+      printf("%d students are queued, student %d will try again later.\n", queued, no);
     }
   }
 
   return NULL;
 }
 
-int create(pthread_t *thread, pthread_attr_t *thread_attr, void *(threadfun)(void*), char* message)
+int create(pthread_t *thread, pthread_attr_t *thread_attr, void *(threadfun)(void*), void* thread_args, char* message)
 {
-  if (pthread_create(thread, thread_attr, threadfun, NULL) != 0)
+  if (pthread_create(thread, thread_attr, threadfun, thread_args) != 0)
   {
     printf("Error creating %s\n", message);
     return 1;
@@ -99,12 +99,13 @@ int main(int argc, char **argv)
   srand(time(NULL));
   sem_init(&assist_mutex, 0, 1);
   sem_init(&assist_semaphore, 0, 0);
+  sem_init(&assist_finished, 0, 0);
 
-  create(&assist_thread,  NULL, &assistfun,  "assist thread");
+  create(&assist_thread,  NULL, &assistfun, NULL, "assist thread");
   student_threads = malloc(sizeof(pthread_t) * n_students);
   for (int i = 0; i < n_students; i++)
   {
-    create(student_threads + i,  NULL, &studentfun,  "student thread");
+    create(student_threads + i,  NULL, &studentfun, (void*)i, "student thread");
   }
   for (int i = 0; i < n_students; i++)
   {

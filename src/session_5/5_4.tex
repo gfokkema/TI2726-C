@@ -31,7 +31,7 @@
 \begin{minipage}{0.4\textwidth}
 \begin{flushleft} \large
 \emph{Author:}\\
-Your \textsc{Name} % Your name
+Gerlof \textsc{Fokkema} % Your name
 \end{flushleft}
 \end{minipage}
 ~
@@ -80,6 +80,25 @@ Alex \textsc{van Rijs} % Your name
 \end{titlepage}
 
 \section*{Other possible methods}
-Explain other methods that could be used to solve assignment 5.3. Why and how should those methods be used?
+Explain other methods that could be used to solve assignment 5.3. Why and how should those methods be used? \\
+
+Since a few years multicore systems have become increasingly common.
+Below we will highlight some of the alternative solutions that could be used.
+\subsection*{Transactional memory}
+In order to solve the synchronization problem on multicore systems, one could implement some sort
+of transactional memory operations.
+These operations would then guarantuee the user that an operation will be safely executed and that it leaves the resulting memory in the correct state. \\
+The construct \textit{atomic\{S\}} mentioned in the book is an example of such an implementation.
+
+\subsection*{OpenMP}
+Another approach is to use the OpenMP compiler directives to define regions that can be run parallel and
+critical sections.
+This is in fact almost the same mechanism as just using mutexes, but it removes the need for defining mutexes by hand and is therefore slightly easier to use.
+
+\subsection*{Functional Programming Languages}
+Yet another approach is to use functional programming languages.
+Since functional programming languages do not allow mutable state or mutable variables,
+there is no way a program can run into synchronization issues when altering a variable,
+since the whole concept of \textit{altering a value} does not exist.
 
 \end{document}
