@@ -14,7 +14,7 @@
 #define LED3 2
 #define LED4 3
 
-sem_t mutex;
+pthread_mutex_t mutex;
 int shared = 0;
 
 void init()
@@ -56,7 +56,7 @@ void *dispfun()
 
 void *incfun()
 {
-  sem_wait(&mutex);           /** down semaphore : enter mutual exclusion */
+  pthread_mutex_lock(&mutex);           /** down semaphore : enter mutual exclusion */
 
   int i;
   for (i = 0; i < 15; i++)
@@ -67,13 +67,13 @@ void *incfun()
     sleep(1);
   }
 
-  sem_post(&mutex);           /**   up semaphore : exit mutual exclusion */
+  pthread_mutex_unlock(&mutex);           /**   up semaphore : exit mutual exclusion */
   return NULL;
 }
 
 void *decfun()
 {
-  sem_wait(&mutex);           /** down semaphore : enter mutual exclusion */
+  pthread_mutex_lock(&mutex);           /** down semaphore : enter mutual exclusion */
 
   int i;
   for (i = 0; i < 10; i++)
@@ -84,7 +84,7 @@ void *decfun()
     sleep(1);
   }
 
-  sem_post(&mutex);           /**   up semaphore : exit mutual exclusion */
+  pthread_mutex_unlock(&mutex);           /**   up semaphore : exit mutual exclusion */
   return NULL;
 }
 
@@ -111,7 +111,7 @@ int join(pthread_t thread, char* message)
 
 int main()
 {
-  sem_init(&mutex,     0, 1);
+  pthread_mutex_init(&mutex, NULL);
 
   pthread_t      inc_thread;
   pthread_t      dec_thread;
@@ -131,7 +131,7 @@ int main()
   join(dec_thread,  "dec thread");
   pthread_cancel(disp_thread);
 
-  sem_destroy(&mutex);
+  pthread_mutex_destroy(&mutex);
 
   return 0;
 }
